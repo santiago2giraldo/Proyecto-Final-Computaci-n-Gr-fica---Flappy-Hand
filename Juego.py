@@ -26,6 +26,32 @@ def aplicar_gravedad_y_rozamiento(jugador, dt):
     jugador["vx"] *= drag
     jugador["vy"] *= drag
 
+
+# ------------------
+# PANTALLA DE INICIO
+# -----------------
+def pantalla_inicio():
+    imagen = pygame.image.load("pantalla_inicio.jpg")  
+    imagen = pygame.transform.scale(imagen, (W, H))
+
+    start_time = pygame.time.get_ticks()  
+
+    while True:
+        # Mostrar la imagen
+        screen.blit(imagen, (0, 0))
+
+        # Salida normal
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        # Esperar 3 segundos
+        if pygame.time.get_ticks() - start_time >= 3000:
+            return  # sale para ir al menú
+
+        pygame.display.flip()
+        clock.tick(60)
 # ---------------------------------------
 # INSTRUCCIONES
 # ---------------------------------------
@@ -138,5 +164,7 @@ def jugar():
 # ---------------------------------------
 # EJECUCIÓN
 # ---------------------------------------
+pantalla_inicio()
 menu_principal()
+
 
