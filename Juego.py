@@ -20,12 +20,11 @@ def aplicar_gravedad_y_rozamiento(jugador, dt):
     jugador ["vy"] *= drag     
 
             
-while True:
-
+while not game_over:
+    
     dt = clock.tick(120) / 1000.0  # delta tiempo en segundos a 120 FPS máx
 
-    # Entrada de usuario / eventos 
-    for e in pygame.event.get():
-        if e.type == pygame.QUIT:
-            pygame.quit()
-            raise SystemExit
+    for event in pygame.event.get():
+         if event.type == pygame.QUIT:
+            game_over = True
+
