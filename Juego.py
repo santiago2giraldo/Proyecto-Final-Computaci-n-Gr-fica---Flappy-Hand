@@ -1,10 +1,11 @@
 import pygame
 import random
+import sys
 
-# ---------------------------
-# CONFIGURACIÓN
-# ---------------------------
-W, H = 900, 600
+# ---------------------------------------
+# CONFIGURACIÓN INICIAL
+# ---------------------------------------
+W, H = 800, 600
 GRAVEDAD = 2000.0
 RESTITUCION = 0.6
 ROZAMIENTO_AIRE = 0.5
@@ -12,138 +13,134 @@ ROZAMIENTO_AIRE = 0.5
 pygame.init()
 screen = pygame.display.set_mode((W, H))
 clock  = pygame.time.Clock()
-pygame.display.set_caption("Gravedad Pygame")
+pygame.display.set_caption("Flappy Bird - Proyecto")
 font = pygame.font.SysFont(None, 40)
-font_small = pygame.font.SysFont(None, 24)
+font_small = pygame.font.SysFont(None, 26)
 
-# ---------------------------
-# FUNCIONES DEL JUEGO
-# ---------------------------
+# ---------------------------------------
+# FÍSICA DEL JUGADOR
+# ---------------------------------------
 def aplicar_gravedad_y_rozamiento(jugador, dt):
     drag = ROZAMIENTO_AIRE ** dt
     jugador["vy"] += GRAVEDAD * dt
     jugador["vx"] *= drag
     jugador["vy"] *= drag
 
-
-# ---------------------------
-# MENÚ PRINCIPAL
-# ---------------------------
-def menu_principal():
-    while True:
-        screen.fill((20, 20, 20))
-
-        mx, my = pygame.mouse.get_pos()
-
-        # Botones
-        botones = [
-            ("Jugar", (W//2, 200)),
-            ("Instrucciones", (W//2, 280)),
-            ("Salir", (W//2, 360)),
-        ]
-
-        for texto, (x, y) in botones:
-            render = font.render(texto, True, (255, 255, 255))
-            rect = render.get_rect(center=(x, y))
-
-            # Efecto hover
-            color_fondo = (80, 80, 80) if rect.collidepoint(mx, my) else (50, 50, 50)
-            pygame.draw.rect(screen, color_fondo, rect.inflate(40, 20), border_radius=10)
-
-            screen.blit(render, rect)
-
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                raise SystemExit
-
-            if e.type == pygame.MOUSEBUTTONDOWN:
-                for texto, (x, y) in botones:
-                    render = font.render(texto, True, (255, 255, 255))
-                    rect = render.get_rect(center=(x, y))
-
-                    if rect.inflate(40, 20).collidepoint(mx, my):
-                        if texto == "Jugar":
-                            return  # Sale del menú y ejecuta el juego
-                        if texto == "Instrucciones":
-                            instrucciones()
-                        if texto == "Salir":
-                            pygame.quit()
-                            raise SystemExit
-
-        pygame.display.flip()
-        clock.tick(60)
-
-
-# ---------------------------
-# PANTALLA DE INSTRUCCIONES
-# ---------------------------
+# ---------------------------------------
+# INSTRUCCIONES
+# ---------------------------------------
 def instrucciones():
     while True:
-        screen.fill((10, 10, 30))
+        screen.fill((0, 150, 255))
 
-        lines = [
-            "INSTRUCCIONES:",
-            "- Este juego simula gravedad, rozamiento y rebotes.",
-            "- El jugador cae acelerado por la gravedad.",
-            "- Rebota al tocar el piso.",
+        titulo = font.render("INSTRUCCIONES", True, (255, 255, 255))
+        t_rect = titulo.get_rect(center=(W//2, 80))
+        screen.blit(titulo, t_rect)
+
+        texto = [
+            "Este es el Flappy Bird experimental.",
+            "El pájaro cae con gravedad.",
+            "Presiona ESPACIO para impulsarte.",
             "",
-            "Haz clic para volver al menú..."
+            "Presiona ESC para volver al menú."
         ]
 
-        y = 150
-        for line in lines:
-            render = font_small.render(line, True, (255, 255, 255))
-            screen.blit(render, (50, y))
+        y = 160
+        for linea in texto:
+            r = font_small.render(linea, True, (255,255,255))
+            screen.blit(r, (80, y))
             y += 40
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
-                raise SystemExit
-
-            if e.type == pygame.MOUSEBUTTONDOWN:
-                return  # vuelve al menú
-
+                sys.exit()
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                return
+        
         pygame.display.flip()
         clock.tick(60)
 
+# ---------------------------------------
+# MENÚ PRINCIPAL
+# ---------------------------------------
+def menu_principal():
+    fondo = pygame.image.load("menu_flappybird.jpg")
+    fondo = pygame.transform.scale(fondo, (W, H))
 
-# ---------------------------
-# LOOP DEL JUEGO PRINCIPAL
-# ---------------------------
-def jugar():
-    # Un ejemplo de jugador (puedes reemplazarlo por tu código)
-    jugador = {"x": W//2, "y": 50, "vx": 0, "vy": 0}
+    # Zonas invisibles donde se puede hacer clic
+    # (x, y, width, height)
+    boton_jugar = pygame.Rect(W//2 - 150, 240, 300, 70)
+    boton_instrucciones = pygame.Rect(W//2 - 150, 320, 300, 70)
+    boton_salir = pygame.Rect(W//2 - 150, 400, 300, 70)
 
     while True:
-        dt = clock.tick(120) / 1000.0
+        screen.blit(fondo, (0, 0))
+        mx, my = pygame.mouse.get_pos()
+
+        # --- DEBUG opcional: mostrar contornos ---
+        # pygame.draw.rect(screen, (255,0,0), boton_jugar, 2)
+        # pygame.draw.rect(screen, (0,255,0), boton_instrucciones, 2)
+        # pygame.draw.rect(screen, (0,0,255), boton_salir, 2)
 
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
-                raise SystemExit
+                sys.exit()
 
+            if e.type == pygame.MOUSEBUTTONDOWN:
+                if boton_jugar.collidepoint(mx, my):
+                    jugar()
+                if boton_instrucciones.collidepoint(mx, my):
+                    instrucciones()
+                if boton_salir.collidepoint(mx, my):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+# --------------------------------
+# JUGAR
+# --------------------------------
+def jugar():
+
+    jugador = {"x": 100, "y": 300, "vx": 0, "vy": 0}
+    running = True
+
+    while running:
+        dt = clock.tick(120) / 1000.0
+
+        # EVENTOS
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    return
+                if e.key == pygame.K_SPACE:
+                    jugador["vy"] = -700  # impulso hacia arriba
+
+        # FÍSICA
         aplicar_gravedad_y_rozamiento(jugador, dt)
 
-        # Simulación de piso:
-        if jugador["y"] > H - 50:
-            jugador["y"] = H - 50
-            jugador["vy"] = -jugador["vy"] * RESTITUCION
-
+        # POSICIÓN
         jugador["x"] += jugador["vx"] * dt
         jugador["y"] += jugador["vy"] * dt
 
-        screen.fill((0, 0, 0))
-        pygame.draw.circle(screen, (0, 255, 0), (int(jugador["x"]), int(jugador["y"])), 20)
+        # Rebote con el suelo
+        if jugador["y"] > H - 40:
+            jugador["y"] = H - 40
+            jugador["vy"] = -jugador["vy"] * RESTITUCION
+
+        # DIBUJAR
+        screen.fill((0, 180, 255))
+        pygame.draw.circle(screen, (255, 255, 0), (int(jugador["x"]), int(jugador["y"])), 20)
 
         pygame.display.flip()
-
-
-# ---------------------------
-# PROGRAMA: iniciar menú
-# ---------------------------
+# ---------------------------------------
+# EJECUCIÓN
+# ---------------------------------------
 menu_principal()
-jugar()
-
-
