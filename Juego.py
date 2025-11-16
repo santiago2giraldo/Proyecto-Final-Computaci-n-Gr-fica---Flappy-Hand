@@ -18,6 +18,15 @@ font = pygame.font.SysFont(None, 40)
 font_small = pygame.font.SysFont(None, 26)
 
 # ---------------------------------------
+# CONFIGURACIÓN OBSTÁCULOS
+# ---------------------------------------
+VELOCIDAD_OBSTACULO = 200.0   # Píxeles por segundo
+ANCHO_OBSTACULO = 80
+ESPACIO_OBSTACULO = 180       # Espacio vertical entre tubos
+INTERVALO_OBSTACULO = 1.8     # Segundos entre cada nuevo obstáculo
+COLOR_TUBO = (0, 160, 30)     # Un color verde para los tubos
+
+# ---------------------------------------
 # FÍSICA DEL JUGADOR
 # ---------------------------------------
 def aplicar_gravedad_y_rozamiento(jugador, dt):
@@ -26,32 +35,6 @@ def aplicar_gravedad_y_rozamiento(jugador, dt):
     jugador["vx"] *= drag
     jugador["vy"] *= drag
 
-
-# ------------------
-# PANTALLA DE INICIO
-# -----------------
-def pantalla_inicio():
-    imagen = pygame.image.load("pantalla_inicio.jpg")
-    imagen = pygame.transform.scale(imagen, (W, H))
-
-    start_time = pygame.time.get_ticks()  # tiempo inicial
-
-    while True:
-        screen.blit(imagen, (0, 0))
-
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-                return
-
-        if pygame.time.get_ticks() - start_time >= 3000:
-            return
-
-        pygame.display.flip()
-        clock.tick(60)
 # ---------------------------------------
 # INSTRUCCIONES
 # ---------------------------------------
@@ -87,23 +70,53 @@ def instrucciones():
         pygame.display.flip()
         clock.tick(60)
 
+# ------------------
+# PANTALLA DE INICIO
+# -----------------
+def pantalla_inicio():
+    imagen = pygame.image.load("pantalla_inicio.jpg")
+    imagen = pygame.transform.scale(imagen, (W, H))
+
+    start_time = pygame.time.get_ticks()  # tiempo inicial
+
+    while True:
+        screen.blit(imagen, (0, 0))
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                return
+
+        if pygame.time.get_ticks() - start_time >= 3000:
+            return
+
+        pygame.display.flip()
+        clock.tick(60)
 # ---------------------------------------
 # MENÚ PRINCIPAL
 # ---------------------------------------
 def menu_principal():
-    fondo = pygame.image.load("menu_flappybird.jpg")
+    fondo = pygame.image.load("Menu.jpg")
     fondo = pygame.transform.scale(fondo, (W, H))
 
     # Zonas invisibles donde se puede hacer clic
     # (x, y, width, height)
-    boton_jugar = pygame.Rect(W//2 - 100, 210, 400, 70)
-    boton_instrucciones = pygame.Rect(W//2 - 100, 300, 400, 70)
-    boton_salir = pygame.Rect(W//2 - 100, 380, 400, 70)
-    
+    boton_jugar = pygame.Rect(W//2 - 150, 240, 300, 70)
+    boton_instrucciones = pygame.Rect(W//2 - 150, 320, 300, 70)
+    boton_salir = pygame.Rect(W//2 - 150, 400, 300, 70)
+
     while True:
         screen.blit(fondo, (0, 0))
         mx, my = pygame.mouse.get_pos()
-        
+
+        # --- DEBUG opcional: mostrar contornos ---
+        # pygame.draw.rect(screen, (255,0,0), boton_jugar, 2)
+        # pygame.draw.rect(screen, (0,255,0), boton_instrucciones, 2)
+        # pygame.draw.rect(screen, (0,0,255), boton_salir, 2)
+
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
@@ -128,6 +141,19 @@ def jugar():
 
     jugador = {"x": 100, "y": 300, "vx": 0, "vy": 0}
     running = True
+    # Lógica de Obstáculos
+    # Cada obstáculo será un diccionario: {'x': pos_x, 'centro_y': pos_y_espacio}
+    obstaculos = []
+    tiempo_para_prox_obstaculo = 1.0 # Empezará a generar inmediatamente
+
+    running = True
+    try:
+        fondo = pygame.image.load("Fondo.png")
+    except Exception as e:
+        print("No puedo cargar 'Fondo.png':", e)
+        fondo = pygame.Surface((W, H))
+        fondo.fill((0, 180, 255))
+    fondo = pygame.transform.scale(fondo, (W, H))
 
     while running:
         dt = clock.tick(120) / 1000.0
@@ -144,6 +170,34 @@ def jugar():
                 if e.key == pygame.K_SPACE:
                     jugador["vy"] = -700  # impulso hacia arriba
 
+        # GENERACIÓN DE OBSTÁCULOS
+        tiempo_para_prox_obstaculo -= dt
+        if tiempo_para_prox_obstaculo <= 0:
+            
+            # Reiniciar temporizador
+            tiempo_para_prox_obstaculo = INTERVALO_OBSTACULO
+            
+            # Calcular la posición Y central del espacio
+            margen = int(H * 0.25)
+            centro_y = random.randint(margen + ESPACIO_OBSTACULO // 2, H - margen - ESPACIO_OBSTACULO // 2)
+            
+            # Añadir el nuevo obstáculo a la lista
+            obstaculos.append({'x': W, 'centro_y': centro_y})
+        
+        # MOVIMIENTO DE OBSTÁCULOS
+        obstaculos_visibles = []
+        movimiento_x = VELOCIDAD_OBSTACULO * dt
+        
+        for obs in obstaculos:
+            # Mover el obstáculo hacia la izquierda
+            obs['x'] -= movimiento_x
+            
+            # Mantenerlo en la lista solo si aún es visible
+            if obs['x'] + ANCHO_OBSTACULO > 0:
+                obstaculos_visibles.append(obs)
+                
+        obstaculos = obstaculos_visibles
+
         # FÍSICA
         aplicar_gravedad_y_rozamiento(jugador, dt)
 
@@ -157,15 +211,35 @@ def jugar():
             jugador["vy"] = -jugador["vy"] * RESTITUCION
 
         # DIBUJAR
-        screen.fill((0, 180, 255))
-        pygame.draw.circle(screen, (255, 255, 0), (int(jugador["x"]), int(jugador["y"])), 20)
-
+        screen.blit(fondo, (0, 0))
+        pygame.draw.circle(screen, (0, 0, 0), (int(jugador["x"]), int(jugador["y"])), 20)
+        jugador_img = pygame.image.load("Jugador.png")
+        jugador_img = pygame.transform.scale(jugador_img, (98, 98))
+        screen.blit(jugador_img, (int(jugador["x"])-46, int(jugador["y"])-53))
         pygame.display.flip()
+         
+        # DIBUJAR OBSTÁCULOS
+        
+        for obs in obstaculos:
+            x_int = int(obs['x'])
+            
+            # Calcular rectángulos basados en el centro_y y el espacio
+            alto_superior = obs['centro_y'] - ESPACIO_OBSTACULO // 2
+            y_inferior = obs['centro_y'] + ESPACIO_OBSTACULO // 2
+            alto_inferior = H - y_inferior
+            
+            # Rectángulo superior
+            rect_superior = pygame.Rect(x_int, 0, ANCHO_OBSTACULO, alto_superior)
+            pygame.draw.rect(screen, COLOR_TUBO, rect_superior)
+            
+            # Rectángulo inferior
+            rect_inferior = pygame.Rect(x_int, y_inferior, ANCHO_OBSTACULO, alto_inferior)
+            pygame.draw.rect(screen, COLOR_TUBO, rect_inferior)
+        
+        pygame.display.flip()
+
 # ---------------------------------------
 # EJECUCIÓN
 # ---------------------------------------
 pantalla_inicio()
 menu_principal()
-
-
-
