@@ -164,6 +164,7 @@ def jugar():
     fondo = pygame.transform.scale(fondo, (W, H))
 
     running = True
+    
     while running:
         dt = clock.tick(120) / 1000.0
 
@@ -176,7 +177,6 @@ def jugar():
                     return
                 if e.key == pygame.K_SPACE:
                     jugador["vy"] = -700
-                    if sonido_salto: sonido_salto.play()
 
         # GENERAR OBSTÁCULOS
         tiempo_para_prox_obstaculo -= dt
@@ -219,6 +219,7 @@ def jugar():
             if not obs["contado"] and x + ANCHO_OBSTACULO < jugador["x"]:
                 puntaje += 1
                 obs["contado"] = True
+                if sonido_salto: sonido_salto.play()
 
             # Colisión
             if (x < jugador["x"] < x + ANCHO_OBSTACULO):
@@ -241,6 +242,7 @@ def jugar():
         # Puntaje
         txt = font.render(f"Puntaje: {puntaje}", True, (255,255,255))
         screen.blit(txt, (20, 20))
+        
 
         pygame.display.flip()
 
@@ -255,10 +257,10 @@ def jugar():
         game_over = font.render("GAME OVER", True, (255,0,0))
         screen.blit(game_over, game_over.get_rect(center=(W//2, H//2 - 50)))
 
-        puntaje_final = font_small.render(f"Puntaje: {puntaje}", True, (255,255,255))
+        puntaje_final = font_small.render(f"Puntaje: {puntaje}", True, (0,0,0))
         screen.blit(puntaje_final, puntaje_final.get_rect(center=(W//2, H//2 + 10)))
 
-        presiona = font_small.render("Presiona cualquier tecla...", True, (255,255,255))
+        presiona = font_small.render("Presiona cualquier tecla...", True, (0,0,0))
         screen.blit(presiona, presiona.get_rect(center=(W//2, H//2 + 60)))
 
         pygame.display.flip()
@@ -273,4 +275,3 @@ def jugar():
 # ---------------------------------------
 pantalla_inicio()
 menu_principal()
-
