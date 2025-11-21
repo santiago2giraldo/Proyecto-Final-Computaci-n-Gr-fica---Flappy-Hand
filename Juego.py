@@ -21,11 +21,25 @@ font_small = pygame.font.SysFont(None, 26)
 # CONFIGURACIÓN OBSTÁCULOS
 # ---------------------------------------
 VELOCIDAD_OBSTACULO = 200.0   # Píxeles por segundo
-ANCHO_OBSTACULO = 80
+ANCHO_OBSTACULO = 280
 ESPACIO_OBSTACULO = 180       # Espacio vertical entre tubos
 INTERVALO_OBSTACULO = 1.8     # Segundos entre cada nuevo obstáculo
 COLOR_TUBO = (0, 160, 30)     # Un color verde para los tubos
 
+# ---------------------------------------
+# Cargado de recursos
+# ---------------------------------------
+try:
+    jugador_img = pygame.image.load("Jugador.png")
+    jugador_img = pygame.transform.scale(jugador_img, (98, 98))
+    img_tuberia_orig = pygame.image.load("Tuberias.png")
+    tuberia_abajo = pygame.transform.scale(img_tuberia_orig, (ANCHO_OBSTACULO, H))
+    tuberia_arriba = pygame.transform.flip(tuberia_abajo, False, True)
+except Exception as e:
+   print("Error cargando Tuberias.png:", e)
+   tuberia_abajo = pygame.Surface((ANCHO_OBSTACULO, H))
+   tuberia_abajo.fill(COLOR_TUBO)
+   tuberia_arriba = tuberia_abajo
 # ---------------------------------------
 # FÍSICA DEL JUGADOR
 # ---------------------------------------
@@ -198,6 +212,20 @@ def jugar():
                 
         obstaculos = obstaculos_visibles
 
+        #Colisiones
+        for obs in obstaculos:
+            x_int = int(obs['x'])
+            alto_superior = obs['centro_y'] - ESPACIO_OBSTACULO // 2
+            y_inferior = obs['centro_y'] + ESPACIO_OBSTACULO // 2
+            
+            # Verificar colisión con el rectángulo superior
+            if (x_int < jugador['x'] < x_int + ANCHO_OBSTACULO) and (jugador['y'] - 20 < alto_superior):
+                running = False
+            
+            # Verificar colisión con el rectángulo inferior
+            if (x_int < jugador['x'] < x_int + ANCHO_OBSTACULO) and (jugador['y'] + 20 > y_inferior):
+                running = False
+
         # FÍSICA
         aplicar_gravedad_y_rozamiento(jugador, dt)
 
@@ -213,8 +241,6 @@ def jugar():
         # DIBUJAR
         screen.blit(fondo, (0, 0))
         pygame.draw.circle(screen, (0, 0, 0), (int(jugador["x"]), int(jugador["y"])), 20)
-        jugador_img = pygame.image.load("Jugador.png")
-        jugador_img = pygame.transform.scale(jugador_img, (98, 98))
         screen.blit(jugador_img, (int(jugador["x"])-46, int(jugador["y"])-53))
         
          
@@ -223,18 +249,18 @@ def jugar():
         for obs in obstaculos:
             x_int = int(obs['x'])
             
-            # Calcular rectángulos basados en el centro_y y el espacio
+            # Calculamos dónde empieza y termina el hueco
             alto_superior = obs['centro_y'] - ESPACIO_OBSTACULO // 2
             y_inferior = obs['centro_y'] + ESPACIO_OBSTACULO // 2
-            alto_inferior = H - y_inferior
             
-            # Rectángulo superior
-            rect_superior = pygame.Rect(x_int, 0, ANCHO_OBSTACULO, alto_superior)
-            pygame.draw.rect(screen, COLOR_TUBO, rect_superior)
+            # --- TUBERÍA DE ARRIBA ---
+            # La dibujamos en (y = altura_limite - altura_imagen)
+            # Esto hace que la "boca" de la tubería quede exactamente en el límite del hueco
+            screen.blit(tuberia_arriba, (x_int, alto_superior - H))
             
-            # Rectángulo inferior
-            rect_inferior = pygame.Rect(x_int, y_inferior, ANCHO_OBSTACULO, alto_inferior)
-            pygame.draw.rect(screen, COLOR_TUBO, rect_inferior)
+            # --- TUBERÍA DE ABAJO ---
+            # Esta es fácil, la dibujamos justo donde empieza la parte de abajo
+            screen.blit(tuberia_abajo, (x_int, y_inferior))
         
         pygame.display.flip()
 
