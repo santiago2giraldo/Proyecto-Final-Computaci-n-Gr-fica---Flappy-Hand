@@ -20,14 +20,14 @@ font_small = pygame.font.SysFont(None, 26)
 # ---------------------------------------
 # CONFIGURACIÓN OBSTÁCULOS
 # ---------------------------------------
-VELOCIDAD_OBSTACULO = 200.0   # Píxeles por segundo
-ANCHO_OBSTACULO = 80          # Ancho de cada tubo
-ESPACIO_OBSTACULO = 180       # Espacio vertical entre tubos
-INTERVALO_OBSTACULO = 1.8     # Segundos entre cada nuevo obstáculo
-COLOR_TUBO = (0, 160, 30)     # Un color verde para los tubos
+VELOCIDAD_OBSTACULO = 200.0
+ANCHO_OBSTACULO = 80
+ESPACIO_OBSTACULO = 180
+INTERVALO_OBSTACULO = 1.8
+COLOR_TUBO = (0, 160, 30)
 
 # ---------------------------------------
-# Cargado de recursos
+# CARGA DE RECURSOS
 # ---------------------------------------
 try:
     jugador_img = pygame.image.load("Jugador.png")
@@ -35,13 +35,21 @@ try:
     img_tuberia_orig = pygame.image.load("Tuberias.png")
     tuberia_abajo = pygame.transform.scale(img_tuberia_orig, (ANCHO_OBSTACULO, H))
     tuberia_arriba = pygame.transform.flip(tuberia_abajo, False, True)
-except Exception as e:
-   print("Error cargando Tuberias.png:", e)
-   tuberia_abajo = pygame.Surface((ANCHO_OBSTACULO, H))
-   tuberia_abajo.fill(COLOR_TUBO)
-   tuberia_arriba = tuberia_abajo
+except:
+    tuberia_abajo = pygame.Surface((ANCHO_OBSTACULO, H))
+    tuberia_abajo.fill(COLOR_TUBO)
+    tuberia_arriba = tuberia_abajo
+
+# ----- Sonidos -----
+try:
+    sonido_salto = pygame.mixer.Sound("sonido_pasar_obstaculo.mp3")
+    sonido_colision = pygame.mixer.Sound("sonido_colision.mp3")
+except:
+    sonido_salto = None
+    sonido_colision = None
+
 # ---------------------------------------
-# FÍSICA DEL JUGADOR
+# FÍSICA
 # ---------------------------------------
 def aplicar_gravedad_y_rozamiento(jugador, dt):
     drag = ROZAMIENTO_AIRE ** dt
@@ -57,13 +65,12 @@ def instrucciones():
         screen.fill((0, 150, 255))
 
         titulo = font.render("INSTRUCCIONES", True, (255, 255, 255))
-        t_rect = titulo.get_rect(center=(W//2, 80))
-        screen.blit(titulo, t_rect)
+        screen.blit(titulo, titulo.get_rect(center=(W//2, 80)))
 
         texto = [
             "Este es el Flappy Bird experimental.",
-            "El pájaro cae con gravedad.",
             "Presiona ESPACIO para impulsarte.",
+            "Evita las tuberías.",
             "",
             "Presiona ESC para volver al menú."
         ]
@@ -75,32 +82,27 @@ def instrucciones():
             y += 40
 
         for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            if e.type == pygame.QUIT: sys.exit()
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 return
         
         pygame.display.flip()
         clock.tick(60)
 
-# ------------------
+# ---------------------------------------
 # PANTALLA DE INICIO
-# -----------------
+# ---------------------------------------
 def pantalla_inicio():
     imagen = pygame.image.load("pantalla_inicio.jpg")
     imagen = pygame.transform.scale(imagen, (W, H))
 
-    start_time = pygame.time.get_ticks()  # tiempo inicial
+    start_time = pygame.time.get_ticks()
 
     while True:
         screen.blit(imagen, (0, 0))
 
         for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
+            if e.type == pygame.QUIT: sys.exit()
             if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                 return
 
@@ -109,6 +111,7 @@ def pantalla_inicio():
 
         pygame.display.flip()
         clock.tick(60)
+
 # ---------------------------------------
 # MENÚ PRINCIPAL
 # ---------------------------------------
@@ -116,8 +119,6 @@ def menu_principal():
     fondo = pygame.image.load("Menu.jpg")
     fondo = pygame.transform.scale(fondo, (W, H))
 
-    # Zonas invisibles donde se puede hacer clic
-    # (x, y, width, height)
     boton_jugar = pygame.Rect(W//2 - 150, 240, 300, 70)
     boton_instrucciones = pygame.Rect(W//2 - 150, 320, 300, 70)
     boton_salir = pygame.Rect(W//2 - 150, 400, 300, 70)
@@ -126,15 +127,8 @@ def menu_principal():
         screen.blit(fondo, (0, 0))
         mx, my = pygame.mouse.get_pos()
 
-        # --- DEBUG opcional: mostrar contornos ---
-        # pygame.draw.rect(screen, (255,0,0), boton_jugar, 2)
-        # pygame.draw.rect(screen, (0,255,0), boton_instrucciones, 2)
-        # pygame.draw.rect(screen, (0,0,255), boton_salir, 2)
-
         for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            if e.type == pygame.QUIT: sys.exit()
 
             if e.type == pygame.MOUSEBUTTONDOWN:
                 if boton_jugar.collidepoint(mx, my):
@@ -142,130 +136,141 @@ def menu_principal():
                 if boton_instrucciones.collidepoint(mx, my):
                     instrucciones()
                 if boton_salir.collidepoint(mx, my):
-                    pygame.quit()
                     sys.exit()
 
         pygame.display.flip()
         clock.tick(60)
 
-# --------------------------------
-# JUGAR
-# --------------------------------
+# ---------------------------------------
+# JUEGO PRINCIPAL
+# ---------------------------------------
 def jugar():
 
     jugador = {"x": 100, "y": 300, "vx": 0, "vy": 0}
-    running = True
-    # Lógica de Obstáculos
-    # Cada obstáculo será un diccionario: {'x': pos_x, 'centro_y': pos_y_espacio}
-    obstaculos = []
-    tiempo_para_prox_obstaculo = 1.0 # Empezará a generar inmediatamente
 
-    running = True
+    # Obstáculos
+    obstaculos = []
+    tiempo_para_prox_obstaculo = 1.0
+
+    # Puntaje
+    puntaje = 0
+
+    # Cargar fondo
     try:
         fondo = pygame.image.load("Fondo.png")
-    except Exception as e:
-        print("No puedo cargar 'Fondo.png':", e)
+    except:
         fondo = pygame.Surface((W, H))
         fondo.fill((0, 180, 255))
     fondo = pygame.transform.scale(fondo, (W, H))
 
+    running = True
     while running:
         dt = clock.tick(120) / 1000.0
 
         # EVENTOS
         for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            if e.type == pygame.QUIT: sys.exit()
 
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     return
                 if e.key == pygame.K_SPACE:
-                    jugador["vy"] = -700  # impulso hacia arriba
+                    jugador["vy"] = -700
+                    if sonido_salto: sonido_salto.play()
 
-        # GENERACIÓN DE OBSTÁCULOS
+        # GENERAR OBSTÁCULOS
         tiempo_para_prox_obstaculo -= dt
         if tiempo_para_prox_obstaculo <= 0:
-            
-            # Reiniciar temporizador
             tiempo_para_prox_obstaculo = INTERVALO_OBSTACULO
-            
-            # Calcular la posición Y central del espacio
             margen = int(H * 0.25)
-            centro_y = random.randint(margen + ESPACIO_OBSTACULO // 2, H - margen - ESPACIO_OBSTACULO // 2)
-            
-            # Añadir el nuevo obstáculo a la lista
-            obstaculos.append({'x': W, 'centro_y': centro_y})
-        
-        # MOVIMIENTO DE OBSTÁCULOS
-        obstaculos_visibles = []
-        movimiento_x = VELOCIDAD_OBSTACULO * dt
-        
-        for obs in obstaculos:
-            # Mover el obstáculo hacia la izquierda
-            obs['x'] -= movimiento_x
-            
-            # Mantenerlo en la lista solo si aún es visible
-            if obs['x'] + ANCHO_OBSTACULO > 0:
-                obstaculos_visibles.append(obs)
-                
-        obstaculos = obstaculos_visibles
+            centro_y = random.randint(margen + ESPACIO_OBSTACULO // 2,
+                                      H - margen - ESPACIO_OBSTACULO // 2)
+            obstaculos.append({"x": W, "centro_y": centro_y, "contado": False})
 
-        #Colisiones
+        # MOVER OBSTÁCULOS
+        obstaculos_nuevos = []
+        mov_x = VELOCIDAD_OBSTACULO * dt
         for obs in obstaculos:
-            x_int = int(obs['x'])
-            alto_superior = obs['centro_y'] - ESPACIO_OBSTACULO // 2
-            y_inferior = obs['centro_y'] + ESPACIO_OBSTACULO // 2
-            
-            # Verificar colisión con el rectángulo superior
-            if (x_int < jugador['x'] < x_int + ANCHO_OBSTACULO) and (jugador['y'] - 20 < alto_superior):
-                running = False
-            
-            # Verificar colisión con el rectángulo inferior
-            if (x_int < jugador['x'] < x_int + ANCHO_OBSTACULO) and (jugador['y'] + 20 > y_inferior):
-                running = False
+            obs["x"] -= mov_x
+            if obs["x"] + ANCHO_OBSTACULO > 0:
+                obstaculos_nuevos.append(obs)
+        obstaculos = obstaculos_nuevos
 
         # FÍSICA
         aplicar_gravedad_y_rozamiento(jugador, dt)
-
-        # POSICIÓN
-        jugador["x"] += jugador["vx"] * dt
         jugador["y"] += jugador["vy"] * dt
 
-        # Rebote con el suelo
+        # --- COLISIÓN ARRIBA/ABAJO ---
+        if jugador["y"] < 0:
+            jugador["y"] = 0
+            running = False
+
         if jugador["y"] > H - 40:
             jugador["y"] = H - 40
-            jugador["vy"] = -jugador["vy"] * RESTITUCION
+            running = False
+
+        # --- COLISIÓN CON TUBERÍAS ---
+        for obs in obstaculos:
+            x = int(obs["x"])
+            alto_sup = obs["centro_y"] - ESPACIO_OBSTACULO // 2
+            y_inf = obs["centro_y"] + ESPACIO_OBSTACULO // 2
+
+            # Puntaje (solo una vez por obstáculo)
+            if not obs["contado"] and x + ANCHO_OBSTACULO < jugador["x"]:
+                puntaje += 1
+                obs["contado"] = True
+
+            # Colisión
+            if (x < jugador["x"] < x + ANCHO_OBSTACULO):
+                if jugador["y"] < alto_sup or jugador["y"] > y_inf:
+                    running = False
 
         # DIBUJAR
         screen.blit(fondo, (0, 0))
-        pygame.draw.circle(screen, (0, 0, 0), (int(jugador["x"]), int(jugador["y"])), 20)
         screen.blit(jugador_img, (int(jugador["x"])-46, int(jugador["y"])-53))
-        
-         
-        # DIBUJAR OBSTÁCULOS
-        
+
+        # Dibujar tubos
         for obs in obstaculos:
-            x_int = int(obs['x'])
-            
-            # Calculamos dónde empieza y termina el hueco
-            alto_superior = obs['centro_y'] - ESPACIO_OBSTACULO // 2
-            y_inferior = obs['centro_y'] + ESPACIO_OBSTACULO // 2
-            
-            # --- TUBERÍA DE ARRIBA ---
-            # La dibujamos en (y = altura_limite - altura_imagen)
-            # Esto hace que la "boca" de la tubería quede exactamente en el límite del hueco
-            screen.blit(tuberia_arriba, (x_int, alto_superior - H))
-            
-            # --- TUBERÍA DE ABAJO ---
-            # Esta es fácil, la dibujamos justo donde empieza la parte de abajo
-            screen.blit(tuberia_abajo, (x_int, y_inferior))
-        
+            x = int(obs["x"])
+            alto_sup = obs["centro_y"] - ESPACIO_OBSTACULO // 2
+            y_inf = obs["centro_y"] + ESPACIO_OBSTACULO // 2
+
+            screen.blit(tuberia_arriba, (x, alto_sup - H))
+            screen.blit(tuberia_abajo, (x, y_inf))
+
+        # Puntaje
+        txt = font.render(f"Puntaje: {puntaje}", True, (255,255,255))
+        screen.blit(txt, (20, 20))
+
         pygame.display.flip()
+
+    # ---------------------------------------------------
+    # GAME OVER
+    # ---------------------------------------------------
+    if sonido_colision: sonido_colision.play()
+
+    while True:
+        screen.blit(fondo, (0,0))
+
+        game_over = font.render("GAME OVER", True, (255,0,0))
+        screen.blit(game_over, game_over.get_rect(center=(W//2, H//2 - 50)))
+
+        puntaje_final = font_small.render(f"Puntaje: {puntaje}", True, (255,255,255))
+        screen.blit(puntaje_final, puntaje_final.get_rect(center=(W//2, H//2 + 10)))
+
+        presiona = font_small.render("Presiona cualquier tecla...", True, (255,255,255))
+        screen.blit(presiona, presiona.get_rect(center=(W//2, H//2 + 60)))
+
+        pygame.display.flip()
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT: sys.exit()
+            if e.type == pygame.KEYDOWN:
+                return
 
 # ---------------------------------------
 # EJECUCIÓN
 # ---------------------------------------
 pantalla_inicio()
 menu_principal()
+
