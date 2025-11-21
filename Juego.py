@@ -21,7 +21,7 @@ font_small = pygame.font.SysFont(None, 26)
 # CONFIGURACIÓN OBSTÁCULOS
 # ---------------------------------------
 VELOCIDAD_OBSTACULO = 200.0   # Píxeles por segundo
-ANCHO_OBSTACULO = 280
+ANCHO_OBSTACULO = 80          # Ancho de cada tubo
 ESPACIO_OBSTACULO = 180       # Espacio vertical entre tubos
 INTERVALO_OBSTACULO = 1.8     # Segundos entre cada nuevo obstáculo
 COLOR_TUBO = (0, 160, 30)     # Un color verde para los tubos
